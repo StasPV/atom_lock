@@ -45,6 +45,9 @@ fn condvar(){
                 };
                 drop(q);
                 dbg!(item);
+                if item == COUNT - 1 {
+                    break;
+                }
             }
         });
 
