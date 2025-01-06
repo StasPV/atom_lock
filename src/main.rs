@@ -1,7 +1,7 @@
-use std::{collections::VecDeque, sync::{Condvar, Mutex}, thread, time::Duration};
+use std::{collections::VecDeque, sync::{atomic::{AtomicBool, Ordering}, Condvar, Mutex}, thread, time::Duration};
 const COUNT: i32 = 20;
 fn main() {
-    thread_condvar();
+    atomic_stop();
 }
 
 #[allow(dead_code)]
@@ -28,6 +28,7 @@ fn thread_park() {
     });
 }
 
+#[allow(dead_code)]
 fn thread_condvar(){
     let queue = Mutex::new(VecDeque::new());
     let not_empty = Condvar::new();
@@ -59,4 +60,26 @@ fn thread_condvar(){
         }
     });
     println!("Завершение! Поток остановлен.");
+}
+
+#[allow(dead_code)]
+fn atomic_stop(){
+    static STOP:AtomicBool = AtomicBool::new(false);
+
+    let background_thread = thread::spawn(||{
+        while !STOP.load(Ordering::Relaxed) {
+            let i = 10;
+            thread::sleep(Duration::from_millis(100));            
+        }
+    });
+
+    for line in std::io::stdin().lines(){
+        match line.unwrap().as_str() {
+            "help"=> println!("comands: help, stop"),
+            "stop"=> break,
+            cmd => println!("unknown command: {cmd:?}"),
+        }
+    }
+    STOP.store(true, Ordering::Relaxed);
+    background_thread.join().unwrap();
 }
