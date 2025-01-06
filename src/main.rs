@@ -58,4 +58,5 @@ fn condvar(){
             thread::sleep(Duration::from_millis(100));
         }
     });
+    println!("Завершение обработки потоков");
 }
