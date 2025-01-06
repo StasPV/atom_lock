@@ -63,6 +63,7 @@ fn thread_condvar(){
 }
 
 #[allow(dead_code)]
+#[allow(unused_variables)]
 fn atomic_stop(){
     static STOP:AtomicBool = AtomicBool::new(false);
 
@@ -76,7 +77,10 @@ fn atomic_stop(){
     for line in std::io::stdin().lines(){
         match line.unwrap().as_str() {
             "help"=> println!("comands: help, stop"),
-            "stop"=> break,
+            "stop"=> {
+                // background_thread.thread().unpark();
+                break;
+            },
             cmd => println!("unknown command: {cmd:?}"),
         }
     }
