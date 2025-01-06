@@ -1,17 +1,20 @@
 use std::{collections::VecDeque, sync::Mutex, thread, time::Duration};
-const COUNT:i32 = 20;
+const COUNT: i32 = 20;
 fn main() {
+    thread_park();
+}
+
+fn thread_park() {
     let queue = Mutex::new(VecDeque::new());
-    thread::scope(|s|{
-        let t = s.spawn(||loop{
+    thread::scope(|s| {
+        let t = s.spawn(|| loop {
             let item = queue.lock().unwrap().pop_front();
             if let Some(item) = item {
                 dbg!(item);
-                if item == COUNT - 1{
+                if item == COUNT - 1 {
                     break;
                 }
-            }
-            else {
+            } else {
                 thread::park();
             }
         });
