@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Condvar, Mutex}, thread, time::Duration};
+use std::{collections::VecDeque, sync::{atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering}, Condvar, Mutex}, thread, time::{Duration, Instant}};
 const COUNT: i32 = 20;
 fn main() {
     process_thread();
@@ -91,26 +91,51 @@ fn atomic_stop(){
 #[allow(dead_code)]
 #[allow(unused_variables)]
 fn process_thread(){
-    let num_done = AtomicUsize::new(0);
-    let main_thread = thread::current();
+    let main_thread = &thread::current();
+    let num_done = &AtomicUsize::new(0);
+    let total_time = &AtomicU64::new(0);
+    let max_time = &AtomicU64::new(0);
     thread::scope(|s|{
-        s.spawn(||{
-            for i in 0..100{
-                let a = i*2;
-                let b = a +4;
-                let c = b * 100;
-                thread::sleep(Duration::from_millis(700));
-                num_done.store(i+1, Ordering::Relaxed);
-                main_thread.unpark();
-            }
-        });
+        for t in 0..4{
+            s.spawn(move||{
+                for i in 0..100{
+                    let start = Instant::now();
+                    let x = get_x(t);
+                    let time_taken = start.elapsed().as_micros() as u64;
+                    
+                    num_done.fetch_add(1, Ordering::Relaxed);
+                    total_time.fetch_add(time_taken, Ordering::Relaxed);
+                    max_time.fetch_max(time_taken, Ordering::Relaxed);
+                    main_thread.unpark();
+                }
+            });
+        }
 
         loop{
+            let total_time = Duration::from_micros(total_time.load(Ordering::Relaxed));
+            let max_time = Duration::from_micros(max_time.load(Ordering::Relaxed));
             let n = num_done.load(Ordering::Relaxed);
-            if n == 100 {break;}
-            println!("Working.. {n}/100 done");
+            match n {
+                0 => println!("Working.. nothing done yet."),
+                100 => break,
+                _ => println!("Working.. {n}/100 done, {:?} average, {:?} peak", total_time/n as u32, max_time)
+            }
             thread::park_timeout(Duration::from_secs(1));
         }
     });
-    println!("Финиш!");
+    let duration = Duration::from_micros(total_time.load(Ordering::Relaxed));
+    println!("Финиш! Общее время выполнения: {}", duration.as_secs());
+}
+
+fn get_x(start:u64)-> u64{
+    static X:AtomicU64 = AtomicU64::new(0);
+    let mut x = X.load(Ordering::Relaxed);
+    if x == 0 {
+        let a = start*2;
+        let b = a +4;
+        x = b * 100;
+        X.store(x, Ordering::Relaxed);
+    }
+    thread::sleep(Duration::from_millis(200));
+    x
 }
