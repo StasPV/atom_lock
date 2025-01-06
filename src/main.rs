@@ -1,4 +1,6 @@
 use std::{collections::VecDeque, sync::{atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering}, Condvar, Mutex}, thread, time::{Duration, Instant}};
+
+use rand::Rng;
 const COUNT: i32 = 20;
 fn main() {
     process_thread();
@@ -98,7 +100,7 @@ fn process_thread(){
     thread::scope(|s|{
         for t in 0..4{
             s.spawn(move||{
-                for i in 0..100{
+                for i in 1..=100{
                     let start = Instant::now();
                     let x = get_x(t);
                     let time_taken = start.elapsed().as_micros() as u64;
@@ -131,10 +133,13 @@ fn get_x(start:u64)-> u64{
     static X:AtomicU64 = AtomicU64::new(0);
     let mut x = X.load(Ordering::Relaxed);
     if x == 0 {
-        let a = start*2;
-        let b = a +4;
-        x = b * 100;
-        X.store(x, Ordering::Relaxed);
+        let mut rng = rand::thread_rng(); 
+        let a = rng.gen_range(start..100);
+        let b = (a +4) * 100;
+        x = match X.compare_exchange(0, b, Ordering::Relaxed, Ordering::Relaxed){
+            Ok(_) => b,
+            Err(k) => k,
+        };
     }
     thread::sleep(Duration::from_millis(200));
     x
