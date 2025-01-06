@@ -1,7 +1,7 @@
-use std::{collections::VecDeque, sync::{atomic::{AtomicBool, Ordering}, Condvar, Mutex}, thread, time::Duration};
+use std::{collections::VecDeque, sync::{atomic::{AtomicBool, AtomicUsize, Ordering}, Condvar, Mutex}, thread, time::Duration};
 const COUNT: i32 = 20;
 fn main() {
-    atomic_stop();
+    process_thread();
 }
 
 #[allow(dead_code)]
@@ -86,4 +86,31 @@ fn atomic_stop(){
     }
     STOP.store(true, Ordering::Relaxed);
     background_thread.join().unwrap();
+}
+
+#[allow(dead_code)]
+#[allow(unused_variables)]
+fn process_thread(){
+    let num_done = AtomicUsize::new(0);
+    let main_thread = thread::current();
+    thread::scope(|s|{
+        s.spawn(||{
+            for i in 0..100{
+                let a = i*2;
+                let b = a +4;
+                let c = b * 100;
+                thread::sleep(Duration::from_millis(700));
+                num_done.store(i+1, Ordering::Relaxed);
+                main_thread.unpark();
+            }
+        });
+
+        loop{
+            let n = num_done.load(Ordering::Relaxed);
+            if n == 100 {break;}
+            println!("Working.. {n}/100 done");
+            thread::park_timeout(Duration::from_secs(1));
+        }
+    });
+    println!("Финиш!");
 }
