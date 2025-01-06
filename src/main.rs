@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, sync::{Condvar, Mutex}, thread, time::Duration};
 const COUNT: i32 = 20;
 fn main() {
-    condvar();
+    thread_condvar();
 }
 
 #[allow(dead_code)]
@@ -28,7 +28,7 @@ fn thread_park() {
     });
 }
 
-fn condvar(){
+fn thread_condvar(){
     let queue = Mutex::new(VecDeque::new());
     let not_empty = Condvar::new();
     thread::scope(|s|{
@@ -58,5 +58,5 @@ fn condvar(){
             thread::sleep(Duration::from_millis(100));
         }
     });
-    println!("Завершение обработки потоков");
+    println!("Завершение! Поток остановлен.");
 }
