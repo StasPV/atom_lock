@@ -33,6 +33,7 @@ fn condvar(){
     let not_empty = Condvar::new();
     thread::scope(|s|{
         s.spawn(||{
+            let border = COUNT -1;
             loop {
                 let mut q = queue.lock().unwrap();
                 let item:i32 = loop {
@@ -45,6 +46,9 @@ fn condvar(){
                 };
                 drop(q);
                 dbg!(item);
+                if item == border {
+                    break;
+                }
             }
         });
 
