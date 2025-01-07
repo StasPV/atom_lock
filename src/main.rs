@@ -1,9 +1,16 @@
-use std::{collections::VecDeque, sync::{atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering}, Condvar, Mutex}, thread, time::{Duration, Instant}};
+use std::{collections::VecDeque, 
+    sync::{atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering}, 
+            Condvar, 
+            Mutex
+        }, 
+    thread, 
+    time::{Duration, Instant}
+};
 
 use rand::Rng;
 const COUNT: i32 = 20;
 fn main() {
-    process_thread();
+    fence_thread();
 }
 
 #[allow(dead_code)]
@@ -143,4 +150,33 @@ fn get_x(start:u64)-> u64{
     }
     thread::sleep(Duration::from_millis(200));
     x
+}
+
+#[allow(dead_code)]
+fn fence_thread(){
+    static mut DATA:[u64; 10] = [0; 10];
+    const ATOMIC_FALSE: AtomicBool = AtomicBool::new(false);
+    static READY: [AtomicBool; 10] = [ATOMIC_FALSE; 10];
+
+    for i in 0..10 {
+        thread::spawn(move||{
+            let mut rng = rand::thread_rng();
+            thread::sleep(Duration::from_millis(rng.gen_range(200..800))); // Установим задержку выполнения потока для наглядности примера.
+            let data: u64 = rng.gen_range(0..100); // просто генерируем тестовые данные
+            unsafe{ DATA[i] = data};
+            READY[i].store(true, Ordering::Release);
+        });
+    }
+
+    thread::sleep(Duration::from_millis(500));
+    let ready: [bool; 10] = std::array::from_fn(|i| READY[i].load(Ordering::Relaxed));
+    if ready.contains(&true){
+        fence(Ordering::Acquire);
+        for i in 1..10{
+            if ready[i]{
+                println!("data{i} = {}", unsafe{DATA[i]});
+            }
+        }
+    }
+    println!("Финиш!");
 }
