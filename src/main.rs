@@ -161,7 +161,7 @@ fn fence_thread(){
     for i in 0..10 {
         thread::spawn(move||{
             let mut rng = rand::thread_rng();
-            thread::sleep(Duration::from_millis(rng.gen_range(200..800))); // Установим задержку выполнения потока для наглядности примера.
+            thread::sleep(Duration::from_millis(rng.gen_range(200..700))); // Установим задержку выполнения потока для наглядности примера.
             let data: u64 = rng.gen_range(0..100); // просто генерируем тестовые данные
             unsafe{ DATA[i] = data};
             READY[i].store(true, Ordering::Release);
@@ -179,4 +179,25 @@ fn fence_thread(){
         }
     }
     println!("Финиш!");
+}
+
+#[allow(dead_code)]
+struct SpinLock{
+    locked:AtomicBool,
+}
+#[allow(dead_code)]
+impl SpinLock{
+    const fn new()->Self{
+        Self{locked:AtomicBool::new(false)}
+    }
+
+    fn lock(&self){
+        while self.locked.swap(true, Ordering::Acquire){
+            std::hint::spin_loop();
+        }
+    }
+
+    fn unlock(&self){
+        self.locked.store(false, Ordering::Release);
+    }
 }
