@@ -1,16 +1,13 @@
-use std::{collections::VecDeque, 
-    sync::{atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering}, 
+use std::{cell::UnsafeCell, collections::VecDeque, ops::{Deref, DerefMut}, sync::{atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering}, 
             Condvar, 
             Mutex
-        }, 
-    thread, 
-    time::{Duration, Instant}
+        }, thread, time::{Duration, Instant}
 };
 
 use rand::Rng;
 const COUNT: i32 = 20;
 fn main() {
-    fence_thread();
+    spinlock_guard();
 }
 
 #[allow(dead_code)]
@@ -182,22 +179,69 @@ fn fence_thread(){
 }
 
 #[allow(dead_code)]
-struct SpinLock{
+struct SpinLock<T>{
     locked:AtomicBool,
+    value: UnsafeCell<T>,
 }
 #[allow(dead_code)]
-impl SpinLock{
-    const fn new()->Self{
-        Self{locked:AtomicBool::new(false)}
-    }
-
-    fn lock(&self){
-        while self.locked.swap(true, Ordering::Acquire){
-            std::hint::spin_loop();
+impl<T> SpinLock<T>{
+    const fn new(value: T)->Self{
+        Self{
+            locked:AtomicBool::new(false),
+            value: UnsafeCell::new(value),
         }
     }
 
-    fn unlock(&self){
-        self.locked.store(false, Ordering::Release);
+    fn lock(&self)-> Guard<T> {
+        while self.locked.swap(true, Ordering::Acquire){
+            std::hint::spin_loop();
+        }
+        Guard{ lock: self}
     }
+}
+
+#[allow(dead_code)]
+struct Guard<'a, T>{
+    lock: &'a SpinLock<T>,
+}
+
+#[allow(dead_code)]
+impl<T> Deref for Guard<'_, T>{
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        unsafe{&*self.lock.value.get()}
+    }
+}
+
+#[allow(dead_code)]
+impl<T> DerefMut for Guard<'_, T>{
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe{&mut *self.lock.value.get()}
+    }
+}
+
+impl<T> Drop for Guard<'_, T>{
+    fn drop(&mut self) {
+        self.lock.locked.store(false, Ordering::Release);
+    }
+}
+
+#[allow(dead_code)]
+fn spinlock_guard(){
+    todo!("код из примера пока не работает...")
+    // 
+    // let spin = SpinLock::new(Vec::new());
+    // thread::scope(|s|{
+    //     s.spawn(|| {
+    //         let mut a = spin.lock();
+    //         a.push(1);
+    //             });
+    //     s.spawn(||{
+    //         let mut g = spin.lock();
+    //         g.push(2);
+    //         g.push(2);
+    //     });
+    // });
+    // let g = spin.lock();
+    // assert!(g.as_slice() == [1,2,2] || g.as_slice() == [2,2,1])
 }
