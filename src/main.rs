@@ -7,7 +7,7 @@ use std::{cell::UnsafeCell, collections::VecDeque, ops::{Deref, DerefMut}, sync:
 use rand::Rng;
 const COUNT: i32 = 20;
 fn main() {
-    spinlock_guard();
+    simple_chanel();
 }
 
 #[allow(dead_code)]
@@ -244,4 +244,49 @@ fn spinlock_guard(){
     // });
     // let g = spin.lock();
     // assert!(g.as_slice() == [1,2,2] || g.as_slice() == [2,2,1])
+}
+
+#[allow(dead_code)]
+struct Chanel<T>{
+    queue: Mutex<VecDeque<T>>,
+    item_ready: Condvar,
+}
+
+#[allow(dead_code)]
+impl<T> Chanel<T>{
+    fn new()->Self{
+        Self{
+            queue: Mutex::new(VecDeque::new()),
+            item_ready: Condvar::new(),
+        }
+    }
+
+    fn send(&self, message: T){
+        self.queue.lock().unwrap().push_back(message);
+        self.item_ready.notify_one();
+    }
+
+    fn receive(&self) -> T{
+        let mut b = self.queue.lock().unwrap();
+        loop {
+            if let Some(message) = b.pop_front(){
+                return message;
+            }
+            b = self.item_ready.wait(b).unwrap();
+        }
+    }
+}
+
+#[allow(dead_code)]
+fn simple_chanel(){
+    let chanel: Chanel<u64> = Chanel::new();
+    thread::scope(|s|{
+        s.spawn(||{
+            chanel.send(100);
+        });
+        s.spawn(||{
+            let message = chanel.receive();
+            println!("Получено сообщение: {}", message);
+        });
+    });
 }
