@@ -3,13 +3,10 @@ use std::{cell::UnsafeCell, collections::VecDeque, mem::MaybeUninit, ops::{Deref
             Mutex
         }, thread, time::{Duration, Instant}
 };
-
-mod simple_chanel;
-use simple_chanel::SimpleChanel;
 use rand::Rng;
+
+
 const COUNT: i32 = 20;
-
-
 
 #[allow(dead_code)]
 fn thread_park() {
@@ -248,7 +245,8 @@ fn spinlock_guard(){
 }
 
 
-
+mod simple_chanel;
+use simple_chanel::SimpleChanel;
 #[allow(dead_code)]
 pub fn simple_chanel(){
     let chanel: SimpleChanel<u64> = SimpleChanel::new();
@@ -263,30 +261,22 @@ pub fn simple_chanel(){
     });
 }
 
-struct MonoChanel<T>{
-    message: UnsafeCell<MaybeUninit<T>>,
-    ready: AtomicBool,
-}
-
-unsafe impl<T> Sync for MonoChanel<T> where T: Send{}
-impl<T> MonoChanel<T>{
-    pub const fn new()->Self{
-        Self { 
-            message: UnsafeCell::new(MaybeUninit::uninit()), 
-            ready: AtomicBool::new(false),
-         }
-    }
-
-    unsafe fn send(&self, message: T){
-        (*self.message.get()).write(message);
-        self.ready.store(true, Ordering::Release);
-    }
-
-    fn is_ready(&self)-> bool{
-        self.ready.load(Ordering::Acquire)
-    }
-
-    unsafe fn receive(&self)-> T{
-        (*self.message.get()).assume_init_read()
-    }
+mod mono_chanel;
+use mono_chanel::MonoChanel;
+#[allow(dead_code)]
+pub fn mono_chanel(){
+    let chanel: MonoChanel<u64> = MonoChanel::new();
+    thread::scope(|s|{
+        s.spawn(||{
+            unsafe{chanel.send(100)};
+        });
+        s.spawn(||loop{
+                if chanel.is_ready() == true{
+                    let message: u64;
+                    unsafe{message = chanel.receive()};
+                    println!("Получено сообщение: {}", message);
+                    break;
+            }
+        });
+    });
 }
