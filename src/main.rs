@@ -1,4 +1,4 @@
-use std::{cell::UnsafeCell, collections::VecDeque, ops::{Deref, DerefMut}, sync::{atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering}, 
+use std::{cell::UnsafeCell, collections::VecDeque, mem::MaybeUninit, ops::{Deref, DerefMut}, sync::{atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering}, 
             Condvar, 
             Mutex
         }, thread, time::{Duration, Instant}
@@ -247,13 +247,13 @@ fn spinlock_guard(){
 }
 
 #[allow(dead_code)]
-struct Chanel<T>{
+struct SimpleChanel<T>{
     queue: Mutex<VecDeque<T>>,
     item_ready: Condvar,
 }
 
 #[allow(dead_code)]
-impl<T> Chanel<T>{
+impl<T> SimpleChanel<T>{
     fn new()->Self{
         Self{
             queue: Mutex::new(VecDeque::new()),
@@ -279,7 +279,7 @@ impl<T> Chanel<T>{
 
 #[allow(dead_code)]
 fn simple_chanel(){
-    let chanel: Chanel<u64> = Chanel::new();
+    let chanel: SimpleChanel<u64> = SimpleChanel::new();
     thread::scope(|s|{
         s.spawn(||{
             chanel.send(100);
@@ -289,4 +289,32 @@ fn simple_chanel(){
             println!("Получено сообщение: {}", message);
         });
     });
+}
+
+struct MonoChanel<T>{
+    message: UnsafeCell<MaybeUninit<T>>,
+    ready: AtomicBool,
+}
+
+unsafe impl<T> Sync for MonoChanel<T> where T: Send{}
+impl<T> MonoChanel<T>{
+    pub const fn new()->Self{
+        Self { 
+            message: UnsafeCell::new(MaybeUninit::uninit()), 
+            ready: AtomicBool::new(false),
+         }
+    }
+
+    unsafe fn send(&self, message: T){
+        (*self.message.get()).write(message);
+        self.ready.store(true, Ordering::Release);
+    }
+
+    fn is_ready(&self)-> bool{
+        self.ready.load(Ordering::Acquire)
+    }
+
+    unsafe fn receive(&self)-> T{
+        (*self.message.get()).assume_init_read()
+    }
 }
