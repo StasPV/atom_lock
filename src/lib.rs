@@ -4,8 +4,11 @@ use std::{cell::UnsafeCell, collections::VecDeque, mem::MaybeUninit, ops::{Deref
         }, thread, time::{Duration, Instant}
 };
 
+mod simple_chanel;
+use simple_chanel::SimpleChanel;
 use rand::Rng;
 const COUNT: i32 = 20;
+
 
 
 #[allow(dead_code)]
@@ -244,36 +247,7 @@ fn spinlock_guard(){
     // assert!(g.as_slice() == [1,2,2] || g.as_slice() == [2,2,1])
 }
 
-#[allow(dead_code)]
-struct SimpleChanel<T>{
-    queue: Mutex<VecDeque<T>>,
-    item_ready: Condvar,
-}
 
-#[allow(dead_code)]
-impl<T> SimpleChanel<T>{
-    fn new()->Self{
-        Self{
-            queue: Mutex::new(VecDeque::new()),
-            item_ready: Condvar::new(),
-        }
-    }
-
-    fn send(&self, message: T){
-        self.queue.lock().unwrap().push_back(message);
-        self.item_ready.notify_one();
-    }
-
-    fn receive(&self) -> T{
-        let mut b = self.queue.lock().unwrap();
-        loop {
-            if let Some(message) = b.pop_front(){
-                return message;
-            }
-            b = self.item_ready.wait(b).unwrap();
-        }
-    }
-}
 
 #[allow(dead_code)]
 pub fn simple_chanel(){
