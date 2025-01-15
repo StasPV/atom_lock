@@ -5,7 +5,7 @@ use std::{
         atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Condvar, Mutex,
     },
-    thread,
+    thread::{self},
     time::{Duration, Instant},
 };
 
@@ -204,8 +204,8 @@ pub fn spinlock_guard() {
     println!("Работа потоков завершена. Состояние: {:?}", slice);
 }
 
-mod simple_chanel;
-use simple_chanel::SimpleChanel;
+mod simple_channel;
+use simple_channel::SimpleChanel;
 #[allow(dead_code)]
 pub fn simple_chanel() {
     let chanel: SimpleChanel<u64> = SimpleChanel::new();
@@ -220,22 +220,39 @@ pub fn simple_chanel() {
     });
 }
 
-mod mono_chanel;
-use mono_chanel::MonoChanel;
+mod mono_channel;
+use mono_channel::MonoChanel;
 #[allow(dead_code)]
 pub fn mono_chanel() {
     let chanel: MonoChanel<u64> = MonoChanel::new();
+    let thd = thread::current();
     thread::scope(|s| {
         s.spawn(|| {
-            unsafe { chanel.send(100) };
+            chanel.send(100);
+            thd.unpark();
         });
         s.spawn(|| loop {
             if chanel.is_ready() == true {
                 let message: u64;
-                unsafe { message = chanel.receive() };
+                message = chanel.receive();
                 println!("Получено сообщение: {}", message);
                 break;
             }
+            thread::park();
         });
     });
+}
+
+mod channel;
+use channel::Channel;
+#[allow(dead_code)]
+pub  fn channel(){
+    let mut chanel = Channel::new();
+    thread::scope(|s|{
+        let (sender, receiver) = chanel.split();
+        s.spawn(move||{
+            sender.send("hello world");
+        });
+        println!("Получено сообщение: {}", receiver.receive());
+    })
 }
