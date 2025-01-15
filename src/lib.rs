@@ -1,5 +1,4 @@
 use rand::Rng;
-use core::slice::SlicePattern;
 use std::{
     collections::VecDeque,
     sync::{
@@ -190,20 +189,19 @@ pub fn spinlock_guard() {
     let spin = SpinLock::new(Vec::new());
     thread::scope(|s| {
         s.spawn(|| {
-                    // let mut a = spin.lock();
-                    // a.push_back(1);
-            todo!("код из примера пока не работает...");
+                    let mut a = spin.lock();
+                    a.push(1);
         });
         s.spawn(|| {
-                    // let mut g = spin.lock();
-                    // g.push_back(2);
-                    // g.push_back(2);
-            todo!("код из примера пока не работает...");
+                    let mut g = spin.lock();
+                    g.push(2);
+                    g.push(3);
         });
     });
     let g = spin.lock();
-    // let slice = g.as_slices().0.as_slice();
-    // assert!(slice == [1, 2, 2] || slice == [2, 2, 1])
+    let slice = g.as_slice();
+    assert!(slice == [1, 2, 3] || slice == [2, 3, 1]);
+    println!("Работа потоков завершена. Состояние: {:?}", slice);
 }
 
 mod simple_chanel;

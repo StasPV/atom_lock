@@ -5,6 +5,8 @@ pub struct SpinLock<T>{
     locked:AtomicBool,
     value: UnsafeCell<T>,
 }
+unsafe impl<T> Sync for SpinLock<T> where T: Send{}
+
 #[allow(dead_code)]
 impl<T> SpinLock<T>{
     pub const fn new(value: T)->Self{
@@ -23,7 +25,7 @@ impl<T> SpinLock<T>{
 }
 
 #[allow(dead_code)]
-struct Guard<'a, T>{
+pub struct Guard<'a, T>{
     lock: &'a SpinLock<T>,
 }
 
