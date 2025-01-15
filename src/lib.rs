@@ -1,10 +1,14 @@
-use std::{cell::UnsafeCell, collections::VecDeque, ops::{Deref, DerefMut}, sync::{atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering}, 
-            Condvar, 
-            Mutex
-        }, thread, time::{Duration, Instant}
-};
 use rand::Rng;
-
+use core::slice::SlicePattern;
+use std::{
+    collections::VecDeque,
+    sync::{
+        atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering},
+        Condvar, Mutex,
+    },
+    thread,
+    time::{Duration, Instant},
+};
 
 const COUNT: i32 = 20;
 
@@ -33,19 +37,18 @@ fn thread_park() {
 }
 
 #[allow(dead_code)]
-fn thread_condvar(){
+fn thread_condvar() {
     let queue = Mutex::new(VecDeque::new());
     let not_empty = Condvar::new();
-    thread::scope(|s|{
-        s.spawn(||{
-            let border = COUNT -1;
+    thread::scope(|s| {
+        s.spawn(|| {
+            let border = COUNT - 1;
             loop {
                 let mut q = queue.lock().unwrap();
-                let item:i32 = loop {
-                    if let Some(item) = q.pop_front(){
+                let item: i32 = loop {
+                    if let Some(item) = q.pop_front() {
                         break item;
-                    }
-                    else {
+                    } else {
                         q = not_empty.wait(q).unwrap();
                     }
                 };
@@ -57,7 +60,7 @@ fn thread_condvar(){
             }
         });
 
-        for i in 0..COUNT{
+        for i in 0..COUNT {
             queue.lock().unwrap().push_back(i);
             not_empty.notify_one();
             thread::sleep(Duration::from_millis(100));
@@ -68,23 +71,23 @@ fn thread_condvar(){
 
 #[allow(dead_code)]
 #[allow(unused_variables)]
-fn atomic_stop(){
-    static STOP:AtomicBool = AtomicBool::new(false);
+fn atomic_stop() {
+    static STOP: AtomicBool = AtomicBool::new(false);
 
-    let background_thread = thread::spawn(||{
+    let background_thread = thread::spawn(|| {
         while !STOP.load(Ordering::Relaxed) {
             let i = 10;
-            thread::sleep(Duration::from_millis(100));            
+            thread::sleep(Duration::from_millis(100));
         }
     });
 
-    for line in std::io::stdin().lines(){
+    for line in std::io::stdin().lines() {
         match line.unwrap().as_str() {
-            "help"=> println!("comands: help, stop"),
-            "stop"=> {
+            "help" => println!("comands: help, stop"),
+            "stop" => {
                 // background_thread.thread().unpark();
                 break;
-            },
+            }
             cmd => println!("unknown command: {cmd:?}"),
         }
     }
@@ -94,19 +97,19 @@ fn atomic_stop(){
 
 #[allow(dead_code)]
 #[allow(unused_variables)]
-fn process_thread(){
+fn process_thread() {
     let main_thread = &thread::current();
     let num_done = &AtomicUsize::new(0);
     let total_time = &AtomicU64::new(0);
     let max_time = &AtomicU64::new(0);
-    thread::scope(|s|{
-        for t in 0..4{
-            s.spawn(move||{
-                for i in 1..=100{
+    thread::scope(|s| {
+        for t in 0..4 {
+            s.spawn(move || {
+                for i in 1..=100 {
                     let start = Instant::now();
                     let x = get_x(t);
                     let time_taken = start.elapsed().as_micros() as u64;
-                    
+
                     num_done.fetch_add(1, Ordering::Relaxed);
                     total_time.fetch_add(time_taken, Ordering::Relaxed);
                     max_time.fetch_max(time_taken, Ordering::Relaxed);
@@ -115,14 +118,18 @@ fn process_thread(){
             });
         }
 
-        loop{
+        loop {
             let total_time = Duration::from_micros(total_time.load(Ordering::Relaxed));
             let max_time = Duration::from_micros(max_time.load(Ordering::Relaxed));
             let n = num_done.load(Ordering::Relaxed);
             match n {
                 0 => println!("Working.. nothing done yet."),
                 100 => break,
-                _ => println!("Working.. {n}/100 done, {:?} average, {:?} peak", total_time/n as u32, max_time)
+                _ => println!(
+                    "Working.. {n}/100 done, {:?} average, {:?} peak",
+                    total_time / n as u32,
+                    max_time
+                ),
             }
             thread::park_timeout(Duration::from_secs(1));
         }
@@ -131,14 +138,14 @@ fn process_thread(){
     println!("Финиш! Общее время выполнения: {}", duration.as_secs());
 }
 
-fn get_x(start:u64)-> u64{
-    static X:AtomicU64 = AtomicU64::new(0);
+fn get_x(start: u64) -> u64 {
+    static X: AtomicU64 = AtomicU64::new(0);
     let mut x = X.load(Ordering::Relaxed);
     if x == 0 {
-        let mut rng = rand::thread_rng(); 
+        let mut rng = rand::thread_rng();
         let a = rng.gen_range(start..100);
-        let b = (a +4) * 100;
-        x = match X.compare_exchange(0, b, Ordering::Relaxed, Ordering::Relaxed){
+        let b = (a + 4) * 100;
+        x = match X.compare_exchange(0, b, Ordering::Relaxed, Ordering::Relaxed) {
             Ok(_) => b,
             Err(k) => k,
         };
@@ -148,113 +155,67 @@ fn get_x(start:u64)-> u64{
 }
 
 #[allow(dead_code)]
-fn fence_thread(){
-    static mut DATA:[u64; 10] = [0; 10];
+fn fence_thread() {
+    static mut DATA: [u64; 10] = [0; 10];
     const ATOMIC_FALSE: AtomicBool = AtomicBool::new(false);
     static READY: [AtomicBool; 10] = [ATOMIC_FALSE; 10];
 
     for i in 0..10 {
-        thread::spawn(move||{
+        thread::spawn(move || {
             let mut rng = rand::thread_rng();
             thread::sleep(Duration::from_millis(rng.gen_range(200..700))); // Установим задержку выполнения потока для наглядности примера.
             let data: u64 = rng.gen_range(0..100); // просто генерируем тестовые данные
-            unsafe{ DATA[i] = data};
+            unsafe { DATA[i] = data };
             READY[i].store(true, Ordering::Release);
         });
     }
 
     thread::sleep(Duration::from_millis(500));
     let ready: [bool; 10] = std::array::from_fn(|i| READY[i].load(Ordering::Relaxed));
-    if ready.contains(&true){
+    if ready.contains(&true) {
         fence(Ordering::Acquire);
-        for i in 1..10{
-            if ready[i]{
-                println!("data{i} = {}", unsafe{DATA[i]});
+        for i in 1..10 {
+            if ready[i] {
+                println!("data{i} = {}", unsafe { DATA[i] });
             }
         }
     }
     println!("Финиш!");
 }
 
+mod spin_lock;
+use spin_lock::SpinLock;
 #[allow(dead_code)]
-struct SpinLock<T>{
-    locked:AtomicBool,
-    value: UnsafeCell<T>,
+pub fn spinlock_guard() {
+    let spin = SpinLock::new(Vec::new());
+    thread::scope(|s| {
+        s.spawn(|| {
+                    // let mut a = spin.lock();
+                    // a.push_back(1);
+            todo!("код из примера пока не работает...");
+        });
+        s.spawn(|| {
+                    // let mut g = spin.lock();
+                    // g.push_back(2);
+                    // g.push_back(2);
+            todo!("код из примера пока не работает...");
+        });
+    });
+    let g = spin.lock();
+    // let slice = g.as_slices().0.as_slice();
+    // assert!(slice == [1, 2, 2] || slice == [2, 2, 1])
 }
-#[allow(dead_code)]
-impl<T> SpinLock<T>{
-    const fn new(value: T)->Self{
-        Self{
-            locked:AtomicBool::new(false),
-            value: UnsafeCell::new(value),
-        }
-    }
-
-    fn lock(&self)-> Guard<T> {
-        while self.locked.swap(true, Ordering::Acquire){
-            std::hint::spin_loop();
-        }
-        Guard{ lock: self}
-    }
-}
-
-#[allow(dead_code)]
-struct Guard<'a, T>{
-    lock: &'a SpinLock<T>,
-}
-
-#[allow(dead_code)]
-impl<T> Deref for Guard<'_, T>{
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        unsafe{&*self.lock.value.get()}
-    }
-}
-
-#[allow(dead_code)]
-impl<T> DerefMut for Guard<'_, T>{
-    fn deref_mut(&mut self) -> &mut T {
-        unsafe{&mut *self.lock.value.get()}
-    }
-}
-
-impl<T> Drop for Guard<'_, T>{
-    fn drop(&mut self) {
-        self.lock.locked.store(false, Ordering::Release);
-    }
-}
-
-#[allow(dead_code)]
-fn spinlock_guard(){
-    todo!("код из примера пока не работает...")
-    // 
-    // let spin = SpinLock::new(Vec::new());
-    // thread::scope(|s|{
-    //     s.spawn(|| {
-    //         let mut a = spin.lock();
-    //         a.push(100 as u64);
-    //             });
-    //     s.spawn(||{
-    //         let mut g = spin.lock();
-    //         g.push(200);
-    //         g.push(200);
-    //     });
-    // });
-    // let g = spin.lock();
-    // assert!(g.as_slice() == [1,2,2] || g.as_slice() == [2,2,1])
-}
-
 
 mod simple_chanel;
 use simple_chanel::SimpleChanel;
 #[allow(dead_code)]
-pub fn simple_chanel(){
+pub fn simple_chanel() {
     let chanel: SimpleChanel<u64> = SimpleChanel::new();
-    thread::scope(|s|{
-        s.spawn(||{
+    thread::scope(|s| {
+        s.spawn(|| {
             chanel.send(100);
         });
-        s.spawn(||{
+        s.spawn(|| {
             let message = chanel.receive();
             println!("Получено сообщение: {}", message);
         });
@@ -264,18 +225,18 @@ pub fn simple_chanel(){
 mod mono_chanel;
 use mono_chanel::MonoChanel;
 #[allow(dead_code)]
-pub fn mono_chanel(){
+pub fn mono_chanel() {
     let chanel: MonoChanel<u64> = MonoChanel::new();
-    thread::scope(|s|{
-        s.spawn(||{
-            unsafe{chanel.send(100)};
+    thread::scope(|s| {
+        s.spawn(|| {
+            unsafe { chanel.send(100) };
         });
-        s.spawn(||loop{
-                if chanel.is_ready() == true{
-                    let message: u64;
-                    unsafe{message = chanel.receive()};
-                    println!("Получено сообщение: {}", message);
-                    break;
+        s.spawn(|| loop {
+            if chanel.is_ready() == true {
+                let message: u64;
+                unsafe { message = chanel.receive() };
+                println!("Получено сообщение: {}", message);
+                break;
             }
         });
     });
