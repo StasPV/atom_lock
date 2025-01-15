@@ -58,6 +58,7 @@ impl<T> Sender<'_, T>{
 }
 
 impl<T> Receiver<'_, T>{
+    #[allow(dead_code)]
     pub fn is_ready(&self)-> bool{
         self.channel.ready.load(Ordering::Relaxed)
     }
