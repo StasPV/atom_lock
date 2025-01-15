@@ -1,5 +1,4 @@
 use std::{cell::UnsafeCell, mem::MaybeUninit, sync::atomic::{AtomicBool, Ordering}};
-
 pub struct MonoChanel<T>{
     message: UnsafeCell<MaybeUninit<T>>,
     ready: AtomicBool,
