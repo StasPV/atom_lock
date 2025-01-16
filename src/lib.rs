@@ -12,7 +12,7 @@ use std::{
 const COUNT: i32 = 20;
 
 #[allow(dead_code)]
-fn thread_park() {
+pub fn thread_park() {
     let queue = Mutex::new(VecDeque::new());
     thread::scope(|s| {
         let t = s.spawn(|| loop {
@@ -36,7 +36,7 @@ fn thread_park() {
 }
 
 #[allow(dead_code)]
-fn thread_condvar() {
+pub fn thread_condvar() {
     let queue = Mutex::new(VecDeque::new());
     let not_empty = Condvar::new();
     thread::scope(|s| {
@@ -70,7 +70,7 @@ fn thread_condvar() {
 
 #[allow(dead_code)]
 #[allow(unused_variables)]
-fn atomic_stop() {
+pub fn atomic_stop() {
     static STOP: AtomicBool = AtomicBool::new(false);
 
     let background_thread = thread::spawn(|| {
@@ -96,7 +96,7 @@ fn atomic_stop() {
 
 #[allow(dead_code)]
 #[allow(unused_variables)]
-fn process_thread() {
+pub fn process_thread() {
     let main_thread = &thread::current();
     let num_done = &AtomicUsize::new(0);
     let total_time = &AtomicU64::new(0);
@@ -154,7 +154,7 @@ fn get_x(start: u64) -> u64 {
 }
 
 #[allow(dead_code)]
-fn fence_thread() {
+pub fn fence_thread() {
     static mut DATA: [u64; 10] = [0; 10];
     const ATOMIC_FALSE: AtomicBool = AtomicBool::new(false);
     static READY: [AtomicBool; 10] = [ATOMIC_FALSE; 10];
