@@ -18,5 +18,4 @@ fn main() {
         8 => atl::channel(),
         _ => println!("неизвестный параметр запуска"), 
     }
-    atl::channel();
 }
