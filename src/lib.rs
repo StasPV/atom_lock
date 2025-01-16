@@ -256,3 +256,8 @@ pub  fn channel(){
         println!("Получено сообщение: {}", receiver.receive());
     })
 }
+
+mod arc;
+pub fn arc(){
+    
+}
