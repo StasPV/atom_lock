@@ -269,16 +269,20 @@ pub fn arc(){
     }
 
     let x = Arc::new(("hello", DetectDrop));
-    let y = x.clone();
+    let y = Arc::downgrade(&x);
+    let z = Arc::downgrade(&x);
 
     let t = thread::spawn(move||{
-        assert_eq!(x.0, "hello");
+        let y = y.upgrade().unwrap();
+        assert_eq!(y.0, "hello");
     });
-    assert_eq!(y.0, "hello");
+    assert_eq!(x.0, "hello");
 
     t.join().unwrap();
     assert_eq!(NUM_DROPS.load(Ordering::Relaxed), 0);
-    drop(y);
+    assert!(z.upgrade().is_some());
+    drop(x);
     assert_eq!(NUM_DROPS.load(Ordering::Relaxed), 1);
+    assert!(z.upgrade().is_none());
     println!("Тестирование Arc завершено успешно!");
 }
