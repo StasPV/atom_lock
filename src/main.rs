@@ -16,6 +16,7 @@ fn main() {
         6 => atl::simple_chanel(),
         7 => atl::mono_chanel(),
         8 => atl::channel(),
+        9 => atl::arc(),
         _ => println!("неизвестный параметр запуска"), 
     }
 }

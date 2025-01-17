@@ -1,3 +1,4 @@
+use arc::Arc;
 use rand::Rng;
 use std::{
     collections::VecDeque,
@@ -259,5 +260,25 @@ pub  fn channel(){
 
 mod arc;
 pub fn arc(){
-    
+    static NUM_DROPS: AtomicUsize = AtomicUsize::new(0);
+    struct DetectDrop;
+    impl Drop for DetectDrop {
+        fn drop(&mut self) {
+            NUM_DROPS.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    let x = Arc::new(("hello", DetectDrop));
+    let y = x.clone();
+
+    let t = thread::spawn(move||{
+        assert_eq!(x.0, "hello");
+    });
+    assert_eq!(y.0, "hello");
+
+    t.join().unwrap();
+    assert_eq!(NUM_DROPS.load(Ordering::Relaxed), 0);
+    drop(y);
+    assert_eq!(NUM_DROPS.load(Ordering::Relaxed), 1);
+    println!("Тестирование Arc завершено успешно!");
 }
