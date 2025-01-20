@@ -286,9 +286,9 @@ pub fn arc(){
 }
 
 pub fn binary_math(){
-    let num_a:u8 = 0b0101;
+    let num_a:u8 = 0b0101; // 0b признак ввода данных в двоичном формате
     let num_b:u8 = 0b0110;
-    println!("Результат - {:08b}", (num_a&num_b));
-    println!("число {num_a} в двоичном формате: {num_a:04b}");
-    println!("число {num_b:04b} в десятичном формате: {num_b}");
+    println!("Результат - {:08b}", (num_a & num_b)); 
+    println!("Результат - {:08b}", (num_a | num_b));
+    println!("Результат - {:08b}", (num_a ^ num_b));
 }
