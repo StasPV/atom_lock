@@ -18,6 +18,7 @@ fn main() {
         8 => atl::channel(),
         9 => atl::arc(),
         10 => atl::binary_math(),
+        11 => atl::cash_delay(),
         _ => println!("неизвестный параметр запуска"), 
     }
 }

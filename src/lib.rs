@@ -1,7 +1,7 @@
 
 use rand::Rng;
 use std::{
-    collections::VecDeque, fmt::Binary, ops::Deref, sync::{
+    collections::VecDeque, sync::{
         atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Condvar, Mutex,
     }, thread::{self}, time::{Duration, Instant}
@@ -291,4 +291,12 @@ pub fn binary_math(){
     println!("Результат - {:08b}", (num_a & num_b)); 
     println!("Результат - {:08b}", (num_a | num_b));
     println!("Результат - {:08b}", (num_a ^ num_b));
+    println!("Результат - {:08b}", (num_a ^ num_a));
+}
+
+mod cashe;
+pub fn cash_delay(){
+    println!("Начало замеров скрости рабрты с кэшем...");
+    cashe::test_cashe_delay();
+    cashe::test_cashe_delay_from_aligned();
 }
