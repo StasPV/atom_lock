@@ -1,13 +1,10 @@
-use arc::Arc;
+
 use rand::Rng;
 use std::{
-    collections::VecDeque,
-    sync::{
+    collections::VecDeque, fmt::Binary, ops::Deref, sync::{
         atomic::{fence, AtomicBool, AtomicU64, AtomicUsize, Ordering},
         Condvar, Mutex,
-    },
-    thread::{self},
-    time::{Duration, Instant},
+    }, thread::{self}, time::{Duration, Instant}
 };
 
 const COUNT: i32 = 20;
@@ -259,6 +256,7 @@ pub  fn channel(){
 }
 
 mod arc;
+use arc::Arc;
 pub fn arc(){
     static NUM_DROPS: AtomicUsize = AtomicUsize::new(0);
     struct DetectDrop;
@@ -285,4 +283,12 @@ pub fn arc(){
     assert_eq!(NUM_DROPS.load(Ordering::Relaxed), 1);
     assert!(z.upgrade().is_none());
     println!("Тестирование Arc завершено успешно!");
+}
+
+pub fn binary_math(){
+    let num_a:u8 = 0b0101;
+    let num_b:u8 = 0b0110;
+    println!("Результат - {:08b}", (num_a&num_b));
+    println!("число {num_a} в двоичном формате: {num_a:04b}");
+    println!("число {num_b:04b} в десятичном формате: {num_b}");
 }
