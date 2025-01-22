@@ -303,13 +303,24 @@ pub fn cash_delay(){
 
 mod mutex;
 use mutex::CustomMutex;
+use mutex::Condvar as CustomCondvar;
 pub fn mutex(){
     let mutex = CustomMutex::new(0);
-    std::hint::black_box(&mutex);
-    let start = Instant::now();
-    for _ in 0..5_000_000{
-        *mutex.lock() += 1;
-    }
-    let duration = start.elapsed();
-    println!("Заблокировано {} длительность {:?}", *mutex.lock(), duration);
+    let condvar = CustomCondvar::new();
+    let mut wakeups = 0;
+    thread::scope(|s|{
+        s.spawn(||{
+            thread::sleep(Duration::from_secs(1));
+            *mutex.lock() = 123;
+            condvar.notify_one();
+        });
+        let mut m = mutex.lock();
+        while *m < 100 {
+            m = condvar.wait(m);
+            wakeups += 1;
+        }
+        assert_eq!(*m, 123);
+    });
+    assert!(wakeups < 10);
+    println!("Тестирование условной переменной успешно завершено");
 }
