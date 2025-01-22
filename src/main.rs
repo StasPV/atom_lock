@@ -19,6 +19,7 @@ fn main() {
         9 => atl::arc(),
         10 => atl::binary_math(),
         11 => atl::cash_delay(),
+        12 => atl::mutex(),
         _ => println!("неизвестный параметр запуска"), 
     }
 }

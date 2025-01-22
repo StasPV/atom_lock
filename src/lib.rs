@@ -300,3 +300,16 @@ pub fn cash_delay(){
     cashe::test_cashe_delay();
     cashe::test_cashe_delay_from_aligned();
 }
+
+mod mutex;
+use mutex::CustomMutex;
+pub fn mutex(){
+    let mutex = CustomMutex::new(0);
+    std::hint::black_box(&mutex);
+    let start = Instant::now();
+    for _ in 0..5_000_000{
+        *mutex.lock() += 1;
+    }
+    let duration = start.elapsed();
+    println!("Заблокировано {} длительность {:?}", *mutex.lock(), duration);
+}
