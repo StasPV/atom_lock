@@ -89,6 +89,7 @@ impl Condvar {
         }
     }
 
+    #[allow(dead_code)]
     pub fn notify_all(&self) {
         if self.num_waiters.load(Ordering::Relaxed) > 0 {
             self.counter.fetch_add(1, Ordering::Relaxed);

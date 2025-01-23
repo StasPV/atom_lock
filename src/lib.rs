@@ -324,3 +324,5 @@ pub fn mutex(){
     assert!(wakeups < 10);
     println!("Тестирование условной переменной успешно завершено");
 }
+
+mod rwlock;
